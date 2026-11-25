@@ -1,13 +1,13 @@
 import { MathUtils } from 'three';
 
-export function createInput(surface, stick, { active, action, dragLook, touch }) {
+export function createInput(surface, stick, { active, action, freeLook, touch }) {
   const held = new Set();
   const axes = { x: 0, z: 0, yaw: 0, pitch: 0, sprint: false };
   const nub = stick.firstElementChild;
-  let moveId, lookId, lastX, lastY, mouseDown = false;
+  let moveId, lookId, lastX, lastY, mouseX, mouseY;
   const bindings = {
-    Space: 'jump', KeyE: 'use', KeyC: 'inventory', KeyI: 'inventory', KeyB: 'build',
-    KeyR: 'rotate', KeyF: 'supplies', Escape: 'escape',
+    Space: 'jump', KeyE: 'use', KeyC: 'inventory', KeyI: 'pack', KeyB: 'build',
+    BracketLeft: 'previous-plan', BracketRight: 'next-plan', KeyR: 'rotate', KeyF: 'supplies', Escape: 'escape',
     Digit1: 'slot-0', Digit2: 'slot-1', Digit3: 'slot-2', Digit4: 'slot-3'
   };
   addEventListener('keydown', event => {
@@ -31,7 +31,7 @@ export function createInput(surface, stick, { active, action, dragLook, touch })
     held.clear();
     axes.x = axes.z = 0;
     moveId = lookId = undefined;
-    mouseDown = false;
+    mouseX = mouseY = undefined;
     nub.style.transform = '';
   }
   addEventListener('blur', clear);
@@ -40,16 +40,19 @@ export function createInput(surface, stick, { active, action, dragLook, touch })
     axes.pitch = MathUtils.clamp(axes.pitch - dy * amount, -1.5, 1.5);
   }
   document.addEventListener('mousemove', ev => {
-    if (active() && (document.pointerLockElement === surface || mouseDown && dragLook())) {
-      look(ev.movementX, ev.movementY, .0025);
-    }
+    if (!active()) return;
+    if (document.pointerLockElement === surface) look(ev.movementX, ev.movementY, .0025);
+    else if (freeLook() && ev.target === surface) {
+      if (mouseX !== undefined) look(ev.clientX - mouseX, ev.clientY - mouseY, .0034);
+      mouseX = ev.clientX;
+      mouseY = ev.clientY;
+    } else mouseX = mouseY = undefined;
   });
   surface.addEventListener('pointerdown', ev => {
     if (!active()) return;
     if (ev.pointerType === 'mouse') {
-      if (ev.button === 2) mouseDown = true;
       if (ev.button === 0) {
-        if (document.pointerLockElement === surface || dragLook()) action('use');
+        if (document.pointerLockElement === surface || freeLook()) action('use');
         else action('lock');
       }
       return;
@@ -69,7 +72,10 @@ export function createInput(surface, stick, { active, action, dragLook, touch })
   });
   const releaseLook = ev => { if (ev.pointerId === lookId) lookId = undefined; };
   surface.addEventListener('lostpointercapture', releaseLook);
-  addEventListener('mouseup', ev => { if (ev.button === 2) mouseDown = false; });
+  surface.addEventListener('wheel', ev => {
+    if (!active() || !ev.deltaY) return;
+    if (action(ev.deltaY > 0 ? 'next-plan' : 'previous-plan')) ev.preventDefault();
+  }, { passive: false });
   surface.addEventListener('contextmenu', ev => ev.preventDefault());
   function stickMove(ev) {
     const rect = stick.getBoundingClientRect();

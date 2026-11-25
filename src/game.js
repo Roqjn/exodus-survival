@@ -3,6 +3,7 @@ import { createWorld, LIMIT, spawn } from './world.js';
 import { createConstruction, plans } from './construction.js';
 import { createInput } from './input.js';
 import { fresh, readSave, recipes, saveState, slots } from './state.js';
+import { addWorkbench, createEquipment } from './equipment.js';
 import './style.css';
 
 const $ = id => document.getElementById(id);
@@ -13,8 +14,10 @@ const clamp = T.MathUtils.clamp;
 const set = (el, value) => { if (el.textContent !== value) el.textContent = value; };
 const meters = Object.fromEntries(['health', 'hunger', 'thirst', 'stamina'].map(name => [name, $(name)]));
 const size = () => [innerWidth, innerHeight];
+const planKeys = Object.keys(plans);
+const VITAL_DRAIN = .7;
 const targetDirection = new T.Vector3();
-let scene, world, construction, player, state, started = false, paused = true;
+let scene, world, bench, equipment, construction, player, state, started = false, paused = true;
 let panel = null, blueprint = null, rotation = 0, noticeUntil = 0, fallback = false;
 let grounded = true, autoSave = 0;
 let renderer;
@@ -46,7 +49,7 @@ function launch() {
   addEventListener('resize', resize);
   resize();
 
-  const input = createInput(canvas, $('stick'), { active, action, dragLook: () => fallback, touch: touchClass });
+  const input = createInput(canvas, $('stick'), { active, action, freeLook: () => fallback, touch: touchClass });
   function active() { return started && !paused && !panel && state.health > 0; }
   function notify(message) {
     set($('notice'), message);
@@ -65,8 +68,9 @@ function launch() {
     try { canvas.requestPointerLock()?.catch(pointerFallback); } catch { pointerFallback(); }
   }
   function pointerFallback() {
+    if (fallback) return;
     fallback = true;
-    notify('Hold right mouse button and drag to look');
+    notify('Move the mouse over the game to look');
   }
   document.addEventListener('pointerlockerror', pointerFallback);
   document.addEventListener('pointerlockchange', () => {
@@ -88,23 +92,26 @@ function launch() {
       geometries.forEach(g => g.dispose());
       // Construction materials are shared between sessions.
       materials.forEach(m => { m.map?.dispose(); m.dispose(); });
+      camera.clear();
     }
     state = saved ?? fresh();
     scene = new T.Scene();
     world = createWorld(scene);
+    bench = addWorkbench(scene);
+    equipment = createEquipment(scene, camera);
     for (const node of world.entries) {
       const remaining = state.nodes[node.id];
       if (remaining === 0) world.remove(node);
       else if (Number.isInteger(remaining) && remaining > 0 && remaining < node.hits) node.remaining = remaining;
     }
-    construction = createConstruction(scene, [...world.entries, world.pod], state.pieces);
+    construction = createConstruction(scene, [...world.entries, world.pod, bench], state.pieces);
     grounded = true;
     player = { x: state.x, z: state.z, y: construction.surface(state.x, state.z), velocity: 0 };
     input.axes.yaw = state.yaw;
     input.axes.pitch = state.pitch;
     input.axes.sprint = false;
     input.clear();
-    blueprint = null;
+    blueprint = state.slot === 3 ? planKeys[0] : null;
     rotation = 0;
     panel = null;
     $('panel').hidden = true;
@@ -185,6 +192,16 @@ function launch() {
     set($('stock'), 'WOOD ' + state.wood + '  ·  STONE ' + state.stone);
     $('touch-sprint').setAttribute('aria-pressed', String(input.axes.sprint));
   }
+  function nearBench() {
+    return Math.hypot(player.x - bench.x, player.z - bench.z) <= 3.05 && Math.abs(player.y - bench.y) < 1.5;
+  }
+  function cyclePlan(offset) {
+    if (!blueprint) return false;
+    const index = planKeys.indexOf(blueprint);
+    blueprint = planKeys[(index + offset + planKeys.length) % planKeys.length];
+    refreshKit();
+    return true;
+  }
   function choose(item) {
     if (item === 3) open('build');
     else select(item);
@@ -205,12 +222,12 @@ function launch() {
     panel = kind;
     unlock();
     $('panel').hidden = false;
-    set($('panel-title'), kind === 'build' ? 'Construction blueprints' : 'Inventory & crafting');
+    set($('panel-title'), kind === 'build' ? 'Blueprint watch' : kind === 'craft' ? 'Workbench crafting' : 'Inventory');
     const items = $('panel-items');
     items.replaceChildren();
     const summary = document.createElement('p');
     summary.textContent = kind === 'build'
-      ? 'Aim to snap. Rotate the edge with R or Rotate. Green previews are ready to place.'
+      ? 'Choose a plan to equip it. Cycle equipped plans with [ and ], the mouse wheel, or the watch arrows. Use R or Rotate to turn the piece.'
       : 'Wood ' + state.wood + ' · Stone ' + state.stone;
     items.append(summary);
     function option(label, detail, disabled, selectOption) {
@@ -232,7 +249,13 @@ function launch() {
         });
       }
     } else {
-      for (const [key, recipe] of Object.entries(recipes)) {
+      if (kind !== 'craft') {
+        const tip = document.createElement('p');
+        tip.textContent = 'Visit the workbench beside the crash clearing to craft tools.';
+        items.append(tip);
+      }
+      const availableRecipes = kind === 'craft' ? Object.entries(recipes) : [];
+      for (const [key, recipe] of availableRecipes) {
         option(recipe.label, state[key] ? 'Crafted' : recipe.wood + ' wood · ' + recipe.stone + ' stone',
           state[key] || state.wood < recipe.wood || state.stone < recipe.stone,
           () => {
@@ -273,8 +296,8 @@ function launch() {
     const d = camera.getWorldDirection(targetDirection);
     const door = construction.targetDoor(camera);
     let best = null, bestT = Infinity;
-    for (const node of [...world.entries, world.pod]) {
-      if (node.remaining === 0) continue;
+    for (const node of [...world.entries, world.pod, bench]) {
+      if (node.remaining === 0 || (node.type === 'bench' && !nearBench())) continue;
       const x = node.x - player.x, z = node.z - player.z;
       const horizontal = Math.hypot(x, z);
       if (horizontal > 4.35 || horizontal < .01) continue;
@@ -312,6 +335,8 @@ function launch() {
       return;
     }
     if (node.type === 'pod') return supplies();
+    if (node.type === 'bench') return open('craft');
+    equipment.strike();
     const tree = node.type === 'tree';
     const tool = state.slot === (tree ? 1 : 2);
     const resource = tree ? 'wood' : 'stone';
@@ -333,7 +358,12 @@ function launch() {
     if (!active()) return;
     if (command.startsWith('slot-')) choose(Number(command.at(-1)));
     else if (command === 'lock') useLock();
-    else if (command === 'inventory' || command === 'build') open(command);
+    else if (command === 'inventory') open(nearBench() ? 'craft' : 'inventory');
+    else if (command === 'pack') open('inventory');
+    else if (command === 'build') open('build');
+    else if (command === 'previous-plan' || command === 'next-plan') {
+      return cyclePlan(command === 'next-plan' ? 1 : -1);
+    }
     else if (command === 'use') use();
     else if (command === 'supplies') supplies();
     else if (command === 'rotate' && blueprint) rotation = (rotation + 1) % 4;
@@ -353,6 +383,7 @@ function launch() {
   function blocked(x, z) {
     if (Math.abs(x) >= LIMIT - .35 || Math.abs(z) >= LIMIT - .35) return true;
     if (construction.blocks(x, z, player.y)) return true;
+    if (player.y < bench.y + .95 && Math.hypot(x - bench.x, z - bench.z) < bench.radius + .22) return true;
     if (Math.hypot(x - world.pod.x, z - world.pod.z) < world.pod.radius + .28) return true;
     return world.entries.some(n => n.remaining && player.y < n.y + (n.type === 'tree' ? 3.8 * n.size : .83 * n.size)
       && Math.hypot(x - n.x, z - n.z) < n.radius + .28);
@@ -383,8 +414,8 @@ function launch() {
       player.velocity = 0;
     } else grounded = false;
     state.stamina = clamp(state.stamina + (sprint ? -20 : 13) * dt, 0, 100);
-    state.hunger = Math.max(0, state.hunger - (sprint ? .28 : .13) * dt);
-    state.thirst = Math.max(0, state.thirst - (sprint ? .39 : .19) * dt);
+    state.hunger = Math.max(0, state.hunger - (sprint ? .28 : .13) * VITAL_DRAIN * dt);
+    state.thirst = Math.max(0, state.thirst - (sprint ? .39 : .19) * VITAL_DRAIN * dt);
     if (!state.hunger || !state.thirst) state.health = Math.max(0, state.health - 2.2 * dt);
     if (!state.health) {
       save();
@@ -409,12 +440,20 @@ function launch() {
       const key = isTouch() ? '' : '[E] ';
       let label = '';
       if (node?.door) label = node.door.open ? 'Close door' : 'Open door';
+      else if (node?.type === 'bench') label = 'Use workbench';
       else if (node?.type === 'pod') label = 'Recover pod supplies';
       else if (node) label = (node.type === 'tree' ? 'Chop timber' : 'Gather stone') + ' · ' + node.remaining + '/' + node.hits;
       set($('prompt'), label ? key + label : '');
-      set($('touch-use'), node?.door || node?.type === 'pod' ? 'USE' : 'GATHER');
+      set($('touch-use'), node?.door || node?.type === 'pod' || node?.type === 'bench' ? 'USE' : 'GATHER');
     }
     $('touch-rotate').hidden = !blueprint;
+    $('watch-hud').hidden = !blueprint;
+    if (blueprint) {
+      set($('watch-name'), plans[blueprint].label);
+      set($('watch-cost'), plans[blueprint].cost + ' WOOD · ' + (planKeys.indexOf(blueprint) + 1) + '/' + planKeys.length);
+    }
+    $('craft-tip').hidden = !active() || !!blueprint || !nearBench() || (state.axe && state.pick);
+    set($('craft-tip'), isTouch() ? 'WORKBENCH NEARBY · TAP CRAFT' : 'WORKBENCH NEARBY · PRESS C TO CRAFT');
     if (state.pieces.length || construction.hasPieces()) {
       set($('objective'), 'Extend your shelter');
       set($('guide'), 'Snap walls, doorframes and a roof to a foundation.');
@@ -423,10 +462,10 @@ function launch() {
       set($('guide'), 'Open blueprints and place a foundation on clear ground.');
     } else if (state.wood || state.stone) {
       set($('objective'), 'Craft a stone tool');
-      set($('guide'), 'Harvest wood and stone. Craft tools in your pack.');
+      set($('guide'), 'Harvest wood and stone. Craft tools at the workbench near the pod.');
     } else {
       set($('objective'), 'Salvage the crash site');
-      set($('guide'), 'Aim at timber or stone and gather.');
+      set($('guide'), 'Gather wood and stone, then craft tools at the workbench.');
     }
   }
   reset(readSave() ?? undefined);
@@ -449,6 +488,9 @@ function launch() {
       updateHud(now);
       uiAt = now + 70;
     }
+    const motion = input.motion();
+    equipment.update(player, input.axes.yaw, input.axes.pitch, state.slot, dt, started && !paused,
+      active() ? Math.hypot(motion.x, motion.z) : 0, isTouch(), plans[blueprint]);
     renderer.render(scene, camera);
   });
 }

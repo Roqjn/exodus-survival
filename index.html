@@ -18,8 +18,14 @@
       <button id="pause" type="button" aria-label="Pause game"><i aria-hidden="true"></i></button>
     </header>
     <aside class="mission"><small>TELEMETRY / SECTOR A</small><strong id="objective">Salvage the crash site</strong><span id="guide">Aim at timber or stone and gather.</span></aside>
+    <button id="craft-tip" type="button" data-action="inventory" hidden></button>
     <div class="reticle" aria-hidden="true"></div>
     <div class="interaction"><output id="prompt"></output><output id="notice" aria-live="polite"></output></div>
+    <section id="watch-hud" aria-label="Equipped blueprint" hidden>
+      <button type="button" data-action="previous-plan" aria-label="Previous blueprint">‹</button>
+      <div><small>WRIST BLUEPRINTS</small><strong id="watch-name"></strong><span id="watch-cost"></span></div>
+      <button type="button" data-action="next-plan" aria-label="Next blueprint">›</button>
+    </section>
     <div class="bottom">
       <section class="vitals" aria-label="Vitals">
         <label><span>HEALTH</span><meter id="health" min="0" max="100" value="100"></meter></label>
@@ -48,7 +54,7 @@
       <div class="menu-actions" id="pause-actions" hidden><button id="save">Save game</button><button id="load">Load game</button></div>
       <output id="menu-status" aria-live="polite"></output>
     </div>
-    <footer><span class="desktop-hints">WASD move · Mouse look · Space jump · Shift sprint · E gather or use · C craft · B build · R rotate</span><span class="touch-hints">Left stick moves · Swipe right side to look · Use action buttons</span><span>PROTOTYPE V0.1</span></footer>
+    <footer><span class="desktop-hints">WASD move · Mouse look · Space jump · Shift sprint · E gather or use · C workbench · B blueprint watch · R rotate</span><span class="touch-hints">Left stick moves · Swipe right side to look · Use action buttons</span><span>PROTOTYPE V0.1</span></footer>
   </section>
   <section id="panel" class="overlay" hidden role="dialog" aria-modal="true" aria-labelledby="panel-title">
     <div class="sheet"><header><div><small>EX–07 / FIELD TERMINAL</small><h2 id="panel-title"></h2></div><button id="close-panel" aria-label="Close panel">×</button></header><div id="panel-items"></div></div>

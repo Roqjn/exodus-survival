@@ -54,6 +54,12 @@ try {
   observe(page);
   await begin(page);
   await page.waitForFunction(() => document.pointerLockElement?.tagName === 'CANVAS');
+  await expectText(page, '#craft-tip', 'PRESS C TO CRAFT');
+  await page.keyboard.press('c');
+  await page.getByRole('heading', { name: 'Workbench crafting' }).waitFor();
+  assert.equal(await page.getByRole('button', { name: /^Stone axe 3 wood/ }).isEnabled(), false);
+  await page.getByRole('button', { name: 'Close panel' }).click();
+  await page.waitForFunction(() => document.pointerLockElement?.tagName === 'CANVAS');
   const initial = await heading(page);
   await aim(page, -100, 0);
   await page.waitForFunction(original => document.querySelector('#heading').textContent !== original, initial);
@@ -72,6 +78,10 @@ try {
 
   await setSnapshot(page, { ...moved, x: -2, z: 5.8, yaw: Math.atan2(1, 2), pitch: 0 });
   await expectText(page, '#prompt', 'Chop timber');
+  await page.keyboard.press('c');
+  await page.getByRole('heading', { name: 'Inventory', exact: true }).waitFor();
+  assert.equal(await page.locator('#panel').getByRole('button', { name: /^Stone axe/ }).count(), 0);
+  await page.getByRole('button', { name: 'Close panel' }).click();
   await page.keyboard.press('e');
   await expectText(page, '#stock', 'WOOD 3');
   for (let i = 0; i < 3; i++) await page.keyboard.press('e');
@@ -87,9 +97,11 @@ try {
   await page.keyboard.press('c');
   await page.getByRole('button', { name: /^Stone axe 3 wood/ }).click();
   await expectText(page, '#notice', 'Stone axe crafted');
+  await page.screenshot({ path: resolve(output, 'exodus-axe.png') });
   await page.keyboard.press('c');
   await page.getByRole('button', { name: /^Stone pickaxe 4 wood/ }).click();
   await expectText(page, '#notice', 'Stone pickaxe crafted');
+  await page.screenshot({ path: resolve(output, 'exodus-pickaxe.png') });
   s = await save(page);
   assert.equal(s.axe && s.pick, true);
   assert.equal(s.wood, 5);
@@ -98,6 +110,12 @@ try {
   // Start a construction scenario with enough timber for every piece.
   await setSnapshot(page, { ...s, x: 0, z: 7.25, yaw: 0, pitch: -.27, wood: 26 });
   await choose(page, 'Foundation');
+  await expectText(page, '#watch-name', 'Foundation');
+  await page.keyboard.press(']');
+  await expectText(page, '#watch-name', 'Wall');
+  await page.keyboard.press('[');
+  await expectText(page, '#watch-name', 'Foundation');
+  await page.screenshot({ path: resolve(output, 'exodus-watch.png') });
   await expectText(page, '#prompt', 'Ready to place');
   await page.keyboard.press('e');
   await expectText(page, '#notice', 'Foundation placed');
@@ -159,11 +177,15 @@ try {
   await mobile.waitForFunction(original => document.querySelector('#heading').textContent !== original, oldHeading);
   await mobile.getByRole('button', { name: 'JUMP', exact: true }).tap();
   await mobile.getByRole('button', { name: 'CRAFT', exact: true }).tap();
-  await mobile.getByRole('heading', { name: 'Inventory & crafting' }).waitFor();
+  await mobile.locator('#panel').waitFor({ state: 'visible' });
   await mobile.getByRole('button', { name: 'Close panel' }).tap();
   await mobile.getByRole('button', { name: 'BUILD', exact: true }).tap();
   await mobile.getByRole('button', { name: /^Foundation 4 wood$/ }).tap();
   await expectText(mobile, '#prompt', 'Foundation');
+  await mobile.getByRole('button', { name: 'Next blueprint' }).tap();
+  await expectText(mobile, '#watch-name', 'Wall');
+  await mobile.getByRole('button', { name: 'Previous blueprint' }).tap();
+  await expectText(mobile, '#watch-name', 'Foundation');
   await mobile.getByRole('button', { name: 'ROTATE', exact: true }).tap();
   await mobile.getByRole('button', { name: 'Hands', exact: true }).tap();
   const mobileState = await save(mobile);
@@ -173,6 +195,18 @@ try {
   await mobile.getByRole('button', { name: 'GATHER', exact: true }).tap();
   await expectText(mobile, '#stock', 'WOOD 3');
   await mobile.waitForTimeout(300);
+  const fallbackPage = await browser.newPage({ viewport: { width: 800, height: 480 } });
+  observe(fallbackPage);
+  await fallbackPage.addInitScript(() => {
+    HTMLCanvasElement.prototype.requestPointerLock = () => Promise.reject(new Error('Browser blocks pointer lock'));
+  });
+  await begin(fallbackPage);
+  await expectText(fallbackPage, '#notice', 'Move the mouse over the game');
+  const fallbackHeading = await heading(fallbackPage);
+  await fallbackPage.mouse.move(390, 195);
+  await fallbackPage.mouse.move(515, 195);
+  await fallbackPage.waitForFunction(original => document.querySelector('#heading').textContent !== original, fallbackHeading);
+  await fallbackPage.close();
   await mobile.screenshot({ path: resolve(output, 'exodus-mobile.png') });
   console.log('Mobile landscape: joystick, swipe look, jump, pack, blueprint, rotation and gather passed.');
   assert.deepEqual(errors, []);

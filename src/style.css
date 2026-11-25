@@ -91,3 +91,15 @@ footer { position:absolute; bottom:22px; left:8vw; right:5vw; display:flex; just
 @media (orientation:portrait) {
   .touch .rotate-message { display:grid; place-items:center; position:absolute; inset:0; z-index:10; background:#152521; font-weight:600 }
 }
+
+#craft-tip { position:absolute; top:77px; right:max(22px,env(safe-area-inset-right)); text-align:right; background:var(--panel); color:var(--mint); font:700 11px ui-monospace,monospace; letter-spacing:.06em; padding:8px 10px }
+#watch-hud { position:absolute; right:max(22px,env(safe-area-inset-right)); bottom:106px; display:flex; align-items:stretch; color:var(--mint); border:1px solid #8fdca3aa; background:#10271fec; box-shadow:0 0 18px #76e78924; font:600 10px ui-monospace,monospace }
+#watch-hud div { min-width:126px; padding:7px 9px; display:grid; gap:3px }
+#watch-hud small { font-size:9px }
+#watch-hud strong { color:var(--ink); font-size:14px }
+#watch-hud button { padding:0 9px; font-size:22px }
+.touch #craft-tip { top:48px; font-size:9px }
+.touch #watch-hud { bottom:54px; right:50%; transform:translateX(50%) }
+.touch #watch-hud div { min-width:104px; padding:4px 5px }
+.touch #watch-hud strong { font-size:11px }
+@media (max-height:390px) { .touch #watch-hud { bottom:46px } .touch #craft-tip { top:47px } }
