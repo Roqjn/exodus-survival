@@ -12,7 +12,7 @@ const rock = standard('#889599');
 function limb(parent, side) {
   const hand = new T.Group();
   parent.add(hand);
-  box(hand, suit, .145, .15, .39, 0, -.025, .14);
+  box(hand, suit, .145, .15, .56, 0, -.025, .22);
   box(hand, armor, .16, .16, .13, 0, -.013, .045);
   box(hand, glove, .128, .115, .145, 0, 0, -.073);
   for (let i = 0; i < 4; i++) {
@@ -26,7 +26,7 @@ function tool(parent, axe) {
   const group = new T.Group();
   parent.add(group);
   group.position.set(.014, .12, -.084);
-  group.rotation.set(-.2, -.13, -.32);
+  group.rotation.set(-.52, -.13, -.32);
   box(group, timber, .048, .57, .055, 0, .041, 0);
   for (const y of [.225, .255, .285]) box(group, straps, .078, .023, .08, 0, y, 0);
   if (axe) {
@@ -99,9 +99,9 @@ export function createEquipment(scene, camera) {
       const watching = slot === 3;
       const reach = watching ? .17 : .29;
       left.position.set(-reach, watching ? -.23 + bob : -.34 - bob, -.57);
-      left.rotation.set(watching ? -.83 : -.30, watching ? -.31 : .19, watching ? -.25 : -.15);
-      right.position.set(narrow ? .24 : .33, -.32 + bob + hit * .27, -.62 - hit * .39);
-      right.rotation.set(-.32 - hit * 1.05, -.23 - hit * .18, .13 - hit * .3);
+      left.rotation.set(watching ? .88 : .28, watching ? -.31 : .19, watching ? -.25 : -.15);
+      right.position.set(narrow ? .24 : .33, -.35 + bob + hit * .27, -.62 - hit * .39);
+      right.rotation.set(.58 - hit * 1.05, -.23 - hit * .18, .13 - hit * .3);
       right.visible = !watching;
       axe.visible = slot === 1;
       pick.visible = slot === 2;
