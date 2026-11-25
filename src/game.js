@@ -70,7 +70,7 @@ function launch() {
   function pointerFallback() {
     if (fallback) return;
     fallback = true;
-    notify('Move the mouse over the game to look');
+    notify('Move the mouse to look. Hold it near either side to keep turning.');
   }
   document.addEventListener('pointerlockerror', pointerFallback);
   document.addEventListener('pointerlockchange', () => {
@@ -476,6 +476,7 @@ function launch() {
     const dt = Math.min(.05, Math.max(0, (now - last) / 1000));
     last = now;
     if (active()) {
+      input.updateLook(dt);
       movement(dt);
       orient();
       autoSave += dt;

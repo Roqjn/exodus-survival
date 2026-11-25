@@ -4,7 +4,7 @@ A first-person Three.js survival game. Start near a crashed escape pod and explo
 
 ## Run
 
-Use Node 22.12+ and a WebGL 2 browser. Desktop mouse movement looks around automatically once play starts. If a browser blocks pointer lock, move the pointer over the game canvas to look. From the checkout run `npm ci`, then `npm run dev` and open the URL printed by Vite. Run `npm run build` to generate a static site in `dist/`, or `npm run preview -- --host 0.0.0.0 --port 4173` to serve the production build.
+Use Node 22.12+ and a WebGL 2 browser. Desktop mouse movement looks around automatically once play starts. If a browser blocks pointer lock, move the pointer over the game to look and keep it near either side of the viewport to turn continuously. From the checkout run `npm ci`, then `npm run dev` and open the URL printed by Vite. Run `npm run build` to generate a static site in `dist/`, or `npm run preview -- --host 0.0.0.0 --port 4173` to serve the production build.
 
 ## Play
 

@@ -1,10 +1,14 @@
 import { MathUtils } from 'three';
 
+const FULL_TURN = Math.PI * 2;
+const EDGE_TURN_SPEED = 2.8;
+
 export function createInput(surface, stick, { active, action, freeLook, touch }) {
   const held = new Set();
   const axes = { x: 0, z: 0, yaw: 0, pitch: 0, sprint: false };
   const nub = stick.firstElementChild;
   let moveId, lookId, lastX, lastY, mouseX, mouseY;
+  let edgeTurn = 0;
   const bindings = {
     Space: 'jump', KeyE: 'use', KeyC: 'inventory', KeyI: 'pack', KeyB: 'build',
     BracketLeft: 'previous-plan', BracketRight: 'next-plan', KeyR: 'rotate', KeyF: 'supplies', Escape: 'escape',
@@ -31,12 +35,19 @@ export function createInput(surface, stick, { active, action, freeLook, touch })
     held.clear();
     axes.x = axes.z = 0;
     moveId = lookId = undefined;
-    mouseX = mouseY = undefined;
+    clearMouse();
     nub.style.transform = '';
   }
   addEventListener('blur', clear);
+  function clearMouse() {
+    mouseX = mouseY = undefined;
+    edgeTurn = 0;
+  }
+  function turn(yaw) {
+    axes.yaw = MathUtils.euclideanModulo(axes.yaw - yaw + Math.PI, FULL_TURN) - Math.PI;
+  }
   function look(dx, dy, amount) {
-    axes.yaw -= dx * amount;
+    turn(dx * amount);
     axes.pitch = MathUtils.clamp(axes.pitch - dy * amount, -1.5, 1.5);
   }
   document.addEventListener('mousemove', ev => {
@@ -46,8 +57,19 @@ export function createInput(surface, stick, { active, action, freeLook, touch })
       if (mouseX !== undefined) look(ev.clientX - mouseX, ev.clientY - mouseY, .0034);
       mouseX = ev.clientX;
       mouseY = ev.clientY;
-    } else mouseX = mouseY = undefined;
+      const { left, right, width } = surface.getBoundingClientRect();
+      const band = Math.min(40, width * .08);
+      const leftDepth = MathUtils.clamp((left + band - mouseX) / band, 0, 1);
+      const rightDepth = MathUtils.clamp((mouseX - right + band) / band, 0, 1);
+      edgeTurn = rightDepth * rightDepth - leftDepth * leftDepth;
+    } else clearMouse();
   });
+  surface.addEventListener('mouseleave', clearMouse);
+  function updateLook(dt) {
+    if (edgeTurn && freeLook() && document.pointerLockElement !== surface) {
+      turn(edgeTurn * EDGE_TURN_SPEED * dt);
+    }
+  }
   surface.addEventListener('pointerdown', ev => {
     if (!active()) return;
     if (ev.pointerType === 'mouse') {
@@ -106,5 +128,5 @@ export function createInput(surface, stick, { active, action, freeLook, touch })
     const length = Math.max(1, Math.hypot(x, z));
     return { x: x / length, z: z / length, sprint: axes.sprint || held.has('ShiftLeft') || held.has('ShiftRight') };
   }
-  return { axes, motion, clear };
+  return { axes, motion, clear, updateLook };
 }

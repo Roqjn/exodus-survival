@@ -201,12 +201,35 @@ try {
     HTMLCanvasElement.prototype.requestPointerLock = () => Promise.reject(new Error('Browser blocks pointer lock'));
   });
   await begin(fallbackPage);
-  await expectText(fallbackPage, '#notice', 'Move the mouse over the game');
+  await expectText(fallbackPage, '#notice', 'Hold it near either side');
   const fallbackHeading = await heading(fallbackPage);
   await fallbackPage.mouse.move(390, 195);
   await fallbackPage.mouse.move(515, 195);
   await fallbackPage.waitForFunction(original => document.querySelector('#heading').textContent !== original, fallbackHeading);
+  // Track unwrapped compass travel using actual mouse movement and on-screen updates.
+  await fallbackPage.evaluate(() => {
+    const compass = document.querySelector('#heading');
+    const degrees = () => Number(compass.textContent.match(/(\d+)°/)[1]);
+    let last = degrees();
+    window.compassTravel = 0;
+    new MutationObserver(() => {
+      const current = degrees();
+      window.compassTravel += (current - last + 540) % 360 - 180;
+      last = current;
+    }).observe(compass, { childList: true });
+  });
+  await fallbackPage.mouse.move(798, 195);
+  await fallbackPage.waitForFunction(() => window.compassTravel > 370);
+  await fallbackPage.mouse.move(400, 195);
+  await fallbackPage.waitForTimeout(160);
+  const centerHeading = await heading(fallbackPage);
+  await fallbackPage.waitForTimeout(260);
+  assert.equal(await heading(fallbackPage), centerHeading, 'Edge turning stops when the cursor returns to the center');
+  await fallbackPage.mouse.move(2, 195);
+  const leftStart = await fallbackPage.evaluate(() => window.compassTravel);
+  await fallbackPage.waitForFunction(start => window.compassTravel < start - 370, leftStart);
   await fallbackPage.close();
+  console.log('Mouse look: over 360° in both directions with pointer lock denied.');
   await mobile.screenshot({ path: resolve(output, 'exodus-mobile.png') });
   console.log('Mobile landscape: joystick, swipe look, jump, pack, blueprint, rotation and gather passed.');
   assert.deepEqual(errors, []);
