@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101a19">
+<link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAARUlEQVR4nGMQ1VT4TwlmGNwGbPs8A4zJMgCmmZAhWA1A14zPEAwDcGnGZQgDKZqxGUJdAyj2AlUCkSrRSJWERJWkTBcDAPxNzkSXYsOlAAAAAElFTkSuQmCC">
+<title>EXODUS / Survival Prototype</title>
+</head>
+<body>
+<main id="game" aria-label="EXODUS survival game">
+  <div id="viewport"></div>
+  <div class="vignette"></div>
+  <section id="hud" hidden aria-label="Survival display">
+    <header class="top">
+      <div class="identity"><i></i><div><b>EXODUS</b><small>FIELD TERMINAL / EX–07</small></div></div>
+      <output id="heading" class="heading">N · 000°</output>
+      <button id="pause" type="button" aria-label="Pause game"><i aria-hidden="true"></i></button>
+    </header>
+    <aside class="mission"><small>TELEMETRY / SECTOR A</small><strong id="objective">Salvage the crash site</strong><span id="guide">Aim at timber or stone and gather.</span></aside>
+    <div class="reticle" aria-hidden="true"></div>
+    <div class="interaction"><output id="prompt"></output><output id="notice" aria-live="polite"></output></div>
+    <div class="bottom">
+      <section class="vitals" aria-label="Vitals">
+        <label><span>HEALTH</span><meter id="health" min="0" max="100" value="100"></meter></label>
+        <label><span>HUNGER</span><meter id="hunger" min="0" max="100" value="100"></meter></label>
+        <label><span>THIRST</span><meter id="thirst" min="0" max="100" value="100"></meter></label>
+        <label><span>STAMINA</span><meter id="stamina" min="0" max="100" value="100"></meter></label>
+      </section>
+      <div class="kit"><div id="stock"></div><nav id="hotbar" aria-label="Hotbar"></nav></div>
+      <div class="coords"><small>GRID POSITION</small><output id="coords"></output><button data-action="supplies" title="Recover at the escape pod">Pod supplies</button></div>
+    </div>
+    <div id="touch">
+      <div id="stick" aria-label="Movement joystick"><i></i></div>
+      <div class="touch-actions">
+        <button data-action="inventory">CRAFT</button><button data-action="build">BUILD</button>
+        <button data-action="rotate" id="touch-rotate">ROTATE</button><button data-action="sprint" id="touch-sprint">RUN</button>
+        <button data-action="jump">JUMP</button><button data-action="use" id="touch-use">GATHER</button>
+      </div>
+    </div>
+  </section>
+  <section id="menu" class="overlay">
+    <div class="splash">
+      <small>EX–07 / SURVIVAL PROGRAM</small>
+      <h1>EXODUS<span>.</span></h1>
+      <p id="intro">Your escape pod is down. Harvest the forest, craft tools, and build shelter in a 200 × 200 meter survey zone.</p>
+      <div class="menu-actions"><button id="start" class="primary">Begin survival</button><button id="resume" hidden>Load saved game</button></div>
+      <div class="menu-actions" id="pause-actions" hidden><button id="save">Save game</button><button id="load">Load game</button></div>
+      <output id="menu-status" aria-live="polite"></output>
+    </div>
+    <footer><span class="desktop-hints">WASD move · Mouse look · Space jump · Shift sprint · E gather or use · C craft · B build · R rotate</span><span class="touch-hints">Left stick moves · Swipe right side to look · Use action buttons</span><span>PROTOTYPE V0.1</span></footer>
+  </section>
+  <section id="panel" class="overlay" hidden role="dialog" aria-modal="true" aria-labelledby="panel-title">
+    <div class="sheet"><header><div><small>EX–07 / FIELD TERMINAL</small><h2 id="panel-title"></h2></div><button id="close-panel" aria-label="Close panel">×</button></header><div id="panel-items"></div></div>
+  </section>
+  <div class="rotate-message">Rotate your device to landscape.</div>
+</main>
+<script type="module" src="/src/game.js"></script>
+</body>
+</html>
