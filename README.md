@@ -25,3 +25,7 @@ Harvest the trees and rocks flanking the crash clearing. Take your materials to 
 ## Browser checks
 
 Build and run the preview on port 4173. Run `npx playwright install chromium` or set `CHROMIUM` to a compatible installed Chromium binary, then run `npm run test:gameplay`. Set `EXODUS_URL` for a different preview address. Gameplay captures go to `test-results/` by default. Use `EXODUS_SCREENSHOTS` to choose a different destination. The suite uses Chrome software WebGL and emulated mobile touch input.
+
+## GitHub Pages
+
+Select **Settings → Pages → Build and deployment → Source → GitHub Actions** in the repository. Each push to `main` builds and publishes the game at <https://roqjn.github.io/exodus-survival/>. To build the same artifact locally, run `npm ci` and `npm run build:pages`. The generated CSS and JavaScript URLs start with `/exodus-survival/`.
